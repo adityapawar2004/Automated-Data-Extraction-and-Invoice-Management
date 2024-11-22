@@ -9,25 +9,61 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
     setValue(newValue);
   };
 
+  // Aggregate invoice data by customer
+  const aggregatedInvoices = data?.invoices?.reduce((acc, invoice) => {
+    const customerName = invoice.customerName;
+    
+    if (!acc[customerName]) {
+      acc[customerName] = {
+        id: invoice.id,
+        serialNumber: invoice.serialNumber,
+        customerName: invoice.customerName,
+        totalQuantity: 0,
+        totalProducts: new Set(), // Using Set to track unique products
+        tax: 0,
+        totalAmount: 0,
+        date: invoice.date
+      };
+    }
+
+    acc[customerName].totalQuantity += Number(invoice.quantity || 0);
+    acc[customerName].totalProducts.add(invoice.productName); // Add product to Set
+    acc[customerName].tax += Number(invoice.tax || 0);
+    acc[customerName].totalAmount += Number(invoice.totalAmount || 0);
+    
+    // Keep the most recent date
+    const newDate = new Date(invoice.date);
+    const currentDate = new Date(acc[customerName].date);
+    if (newDate > currentDate) {
+      acc[customerName].date = invoice.date;
+    }
+
+    return acc;
+  }, {});
+
+  // Convert Set to number for total products count
+  const finalInvoices = Object.values(aggregatedInvoices || {}).map(invoice => ({
+    ...invoice,
+    totalProducts: invoice.totalProducts.size // Convert Set to number
+  }));
+
   const tabs = [
     {
       label: 'Invoices',
       columns: [
-        { key: 'fileName', label: 'File Source' },
         { key: 'serialNumber', label: 'Serial Number' },
         { key: 'customerName', label: 'Customer Name' },
-        { key: 'productName', label: 'Product Name' },
-        { key: 'quantity', label: 'Quantity' },
+        { key: 'totalQuantity', label: 'Total Quantity' },
+        { key: 'totalProducts', label: 'Total Products' },
         { key: 'tax', label: 'Tax' },
         { key: 'totalAmount', label: 'Total Amount' },
         { key: 'date', label: 'Date' }
       ],
-      data: data?.invoices || []
+      data: finalInvoices
     },
     {
       label: 'Products',
       columns: [
-        { key: 'fileName', label: 'File Source' },
         { key: 'name', label: 'Name' },
         { key: 'quantity', label: 'Quantity' },
         { key: 'unitPrice', label: 'Unit Price' },
@@ -40,7 +76,6 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
     {
       label: 'Customers',
       columns: [
-        { key: 'fileName', label: 'File Source' },
         { key: 'customerName', label: 'Customer Name' },
         { key: 'phoneNumber', label: 'Phone Number' },
         { key: 'totalPurchaseAmount', label: 'Total Purchase Amount' }
