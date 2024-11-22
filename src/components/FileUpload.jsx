@@ -1,33 +1,36 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { processFileWithGemini } from '../services/geminiService';
 import * as XLSX from 'xlsx';
+import { useDispatch, useSelector } from 'react-redux';
+import { setLoading, addData } from '../redux/tableSlice';
 
-function FileUpload({ onFileProcessed }) {
-  const [isLoading, setIsLoading] = useState(false);
+function FileUpload() {
+  const dispatch = useDispatch();
+  const isLoading = useSelector(state => state.table.isLoading);
 
   const onDrop = useCallback(async (acceptedFiles) => {
     try {
-      setIsLoading(true);
+      dispatch(setLoading(true));
       const file = acceptedFiles[0];
       
       if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
         const csvData = await convertExcelToCSV(file);
         const result = await processFileWithGemini(new Blob([csvData], { type: 'text/csv' }));
         const parsedData = parseGeminiResponse(result, file.name);
-        onFileProcessed(parsedData);
+        dispatch(addData(parsedData));
       } else {
         const result = await processFileWithGemini(file);
         const parsedData = parseGeminiResponse(result, file.name);
-        onFileProcessed(parsedData);
+        dispatch(addData(parsedData));
       }
     } catch (error) {
       console.error('Error processing file:', error);
     } finally {
-      setIsLoading(false);
+      dispatch(setLoading(false));
     }
-  }, [onFileProcessed]);
+  }, [dispatch]);
 
   const convertExcelToCSV = (file) => {
     return new Promise((resolve, reject) => {

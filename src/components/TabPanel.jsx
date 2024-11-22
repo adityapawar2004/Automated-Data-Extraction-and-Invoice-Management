@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
-import { Tabs, Tab, Box, CircularProgress } from '@mui/material';
+import { Box, Tab, Tabs } from '@mui/material';
 import CustomTable from './CustomTable';
+import { useSelector } from 'react-redux';
 
-function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoading }) {
+function TabPanel() {
   const [value, setValue] = useState(0);
+  const { customers, products, invoices } = useSelector(state => state.table);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-  const handleEdit = (row) => {
-    console.log('Editing row:', row);
-    // Add your edit logic here
-  };
-
   const tabs = [
     {
+      key: 'invoices',
       label: 'Invoices',
       columns: [
         { key: 'actions', label: 'Actions' },
@@ -28,9 +26,10 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'totalAmount', label: 'Total Amount' },
         { key: 'date', label: 'Date' }
       ],
-      data: data?.invoices || []
+      data: invoices
     },
     {
+      key: 'products',
       label: 'Products',
       columns: [
         { key: 'actions', label: 'Actions' },
@@ -42,9 +41,10 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'priceWithTax', label: 'Price with Tax' },
         { key: 'discount', label: 'Discount' }
       ],
-      data: data?.products || []
+      data: products
     },
     {
+      key: 'customers',
       label: 'Customers',
       columns: [
         { key: 'actions', label: 'Actions' },
@@ -53,7 +53,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'phoneNumber', label: 'Phone Number' },
         { key: 'totalPurchaseAmount', label: 'Total Purchase Amount' }
       ],
-      data: data?.customers || []
+      data: customers
     }
   ];
 
@@ -72,17 +72,13 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
           style={{ padding: '20px' }}
         >
           {value === index && (
-            isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <CustomTable 
-                columns={tab.columns} 
-                data={tab.data} 
-                onEdit={handleEdit}
-              />
-            )
+            <CustomTable 
+              columns={tab.columns} 
+              data={tab.key === 'invoices' ? invoices : 
+                    tab.key === 'products' ? products : 
+                    customers} 
+              tableKey={tab.key}
+            />
           )}
         </div>
       ))}

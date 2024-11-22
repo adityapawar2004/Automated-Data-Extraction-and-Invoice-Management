@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -7,48 +7,44 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button
+  TextField,
+  IconButton
 } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import EditIcon from '@mui/icons-material/Edit';
+import { useDispatch } from 'react-redux';
+import { updateTableData } from '../redux/tableSlice';
 
-function CustomTable({ columns, data, onEdit }) {
-  if (!data || data.length === 0) {
-    return <div>No data available</div>;
-  }
+function CustomTable({ columns, data, tableKey }) {
+  const dispatch = useDispatch();
+  const [editingRow, setEditingRow] = useState(null);
+  const [editedData, setEditedData] = useState({});
 
-  const formatValue = (value, key, row) => {
-    if (key === 'actions') {
-      return (
-        <Button
-          variant="contained"
-          size="small"
-          sx={{
-            backgroundColor: '#d32f2f',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: '#b71c1c',
-            },
-            minWidth: '50px',
-            padding: '4px 12px',
-            fontSize: '0.75rem',
-          }}
-          onClick={() => onEdit(row)}
-        >
-          Edit
-        </Button>
-      );
+  const handleEditClick = (row) => {
+    setEditingRow(row.id);
+    setEditedData({ ...row });
+  };
+
+  const handleSaveClick = () => {
+    if (!tableKey) {
+      console.error('tableKey is required for updating data');
+      return;
     }
-    if (key === 'fileName') {
-      return value.split('.').slice(0, -1).join('.').split('/').pop();
-    }
-    if (typeof value === 'number') {
-      if (key.toLowerCase().includes('price') || 
-          key.toLowerCase().includes('amount') || 
-          key.toLowerCase().includes('tax')) {
-        return `₹${value.toFixed(2)}`;
-      }
-      return value.toString();
-    }
-    return value || '-';
+    
+    dispatch(updateTableData({ 
+      tableKey, 
+      editedRow: { ...editedData }
+    }));
+    
+    setEditingRow(null);
+    setEditedData({});
+  };
+
+  const handleInputChange = (key, value) => {
+    setEditedData(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
   return (
@@ -57,32 +53,54 @@ function CustomTable({ columns, data, onEdit }) {
         <TableHead>
           <TableRow>
             {columns.map((column) => (
-              <TableCell 
-                key={column.key}
-                sx={{ 
-                  fontWeight: 'bold',
-                  backgroundColor: '#f5f5f5',
-                  ...(column.key === 'actions' && {
-                    width: '80px'
-                  })
-                }}
-              >
-                {column.label}
-              </TableCell>
+              <TableCell key={column.key}>{column.label}</TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.map((row, index) => (
-            <TableRow 
-              key={row.id || index}
-              sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}
-            >
+          {data.map((row) => (
+            <TableRow key={row.id}>
               {columns.map((column) => (
-                <TableCell 
-                  key={`${row.id || index}-${column.key}`}
-                >
-                  {formatValue(row[column.key], column.key, row)}
+                <TableCell key={column.key}>
+                  {column.key === 'actions' ? (
+                    editingRow === row.id ? (
+                      <IconButton 
+                        color="primary"
+                        onClick={handleSaveClick}
+                        size="small"
+                      >
+                        <SaveIcon />
+                      </IconButton>
+                    ) : (
+                      <IconButton
+                        color="secondary"
+                        onClick={() => handleEditClick(row)}
+                        size="small"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    )
+                  ) : editingRow === row.id && column.key !== 'fileName' ? (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={editedData[column.key] || ''}
+                      onChange={(e) => handleInputChange(column.key, e.target.value)}
+                      variant="outlined"
+                      type={
+                        column.key.includes('date') ? 'date' :
+                        (column.key.includes('quantity') || 
+                         column.key.includes('price') || 
+                         column.key.includes('amount') || 
+                         column.key.includes('tax')) ? 'number' : 'text'
+                      }
+                      InputProps={{
+                        style: { fontSize: '0.875rem' }
+                      }}
+                    />
+                  ) : (
+                    formatValue(row[column.key], column.key)
+                  )}
                 </TableCell>
               ))}
             </TableRow>
@@ -92,5 +110,21 @@ function CustomTable({ columns, data, onEdit }) {
     </TableContainer>
   );
 }
+
+// Helper function to format values
+const formatValue = (value, key) => {
+  if (key === 'fileName') {
+    return value.split('.').slice(0, -1).join('.').split('/').pop();
+  }
+  if (typeof value === 'number') {
+    if (key.toLowerCase().includes('price') || 
+        key.toLowerCase().includes('amount') || 
+        key.toLowerCase().includes('tax')) {
+      return `₹${value.toFixed(2)}`;
+    }
+    return value.toString();
+  }
+  return value || '-';
+};
 
 export default CustomTable; 

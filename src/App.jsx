@@ -1,31 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Container, Box, Paper, Button, Typography } from '@mui/material';
 import FileUpload from './components/FileUpload.jsx';
 import TabPanel from './components/TabPanel.jsx';
+import { useSelector, useDispatch } from 'react-redux';
+import { clearAllData } from './redux/tableSlice';
 
 function App() {
-  const [tableData, setTableData] = useState({
-    customers: [],
-    products: [],
-    invoices: []
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleFileProcessed = (newData) => {
-    setIsLoading(false);
-    setTableData(prevData => ({
-      customers: [...prevData.customers, ...newData.customers],
-      products: [...prevData.products, ...newData.products],
-      invoices: [...prevData.invoices, ...newData.invoices]
-    }));
-  };
+  const dispatch = useDispatch();
+  const { customers, products, invoices } = useSelector(state => state.table);
 
   const handleClearData = () => {
-    setTableData({
-      customers: [],
-      products: [],
-      invoices: []
-    });
+    dispatch(clearAllData());
   };
 
   return (
@@ -41,13 +26,8 @@ function App() {
             >
               Data Extraction & Invoice Management
             </Typography>
-            <FileUpload 
-              onFileProcessed={handleFileProcessed} 
-              onLoadingChange={setIsLoading} 
-            />
-            {(tableData.customers.length > 0 || 
-              tableData.products.length > 0 || 
-              tableData.invoices.length > 0) && (
+            <FileUpload />
+            {(customers.length > 0 || products.length > 0 || invoices.length > 0) && (
               <Box sx={{ mt: 2 }}>
                 <Button 
                   variant="outlined" 
@@ -61,7 +41,7 @@ function App() {
             )}
           </Paper>
           <Paper sx={{ mt: 3 }}>
-            <TabPanel data={tableData} isLoading={isLoading} />
+            <TabPanel />
           </Paper>
         </Box>
       </Container>
