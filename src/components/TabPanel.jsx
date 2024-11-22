@@ -9,66 +9,18 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
     setValue(newValue);
   };
 
-  // Aggregate invoice data by customer and fileName
-  const aggregatedInvoices = data?.invoices?.reduce((acc, invoice) => {
-    // Create a unique key using both customerName and fileName
-    const key = `${invoice.customerName}-${invoice.fileName}`;
-    
-    if (!acc[key]) {
-      acc[key] = {
-        id: invoice.id,
-        serialNumber: invoice.serialNumber,
-        customerName: invoice.customerName,
-        fileName: invoice.fileName,  // Keep track of fileName
-        totalQuantity: 0,
-        totalProducts: new Set(),
-        tax: 0,
-        totalAmount: 0,
-        date: invoice.date
-      };
-    }
-
-    acc[key].totalQuantity += Number(invoice.quantity || 0);
-    acc[key].totalProducts.add(invoice.productName);
-    acc[key].tax += Number(invoice.tax || 0);
-    acc[key].totalAmount += Number(invoice.totalAmount || 0);
-    
-    // Keep the most recent date
-    const newDate = new Date(invoice.date);
-    const currentDate = new Date(acc[key].date);
-    if (newDate > currentDate) {
-      acc[key].date = invoice.date;
-    }
-
-    return acc;
-  }, {});
-
-  // Convert Set to number for total products count
-  const finalInvoices = Object.values(aggregatedInvoices || {}).map(invoice => ({
-    ...invoice,
-    totalProducts: invoice.totalProducts.size
+  // Modify the invoice processing to keep individual product rows
+  const processedInvoices = data?.invoices?.map(invoice => ({
+    id: `${invoice.id}-${invoice.productName}`,
+    fileName: invoice.fileName,
+    serialNumber: invoice.serialNumber,
+    customerName: invoice.customerName,
+    productName: invoice.productName,
+    quantity: Number(invoice.quantity || 0),
+    tax: Number(invoice.tax || 0),
+    totalAmount: Number(invoice.totalAmount || 0),
+    date: invoice.date
   }));
-
-  // Aggregate customer data by fileName
-  const aggregatedCustomers = data?.customers?.reduce((acc, customer) => {
-    const fileName = customer.fileName;
-    
-    if (!acc[fileName]) {
-      acc[fileName] = {
-        id: `aggregated-${fileName}`,
-        customerName: customer.customerName,
-        phoneNumber: customer.phoneNumber,
-        totalPurchaseAmount: customer.totalPurchaseAmount,
-        fileName: fileName
-      };
-    } else {
-      acc[fileName].totalPurchaseAmount += customer.totalPurchaseAmount;
-    }
-    
-    return acc;
-  }, {});
-
-  const finalCustomers = Object.values(aggregatedCustomers || {});
 
   const tabs = [
     {
@@ -77,13 +29,13 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'fileName', label: 'File Name' },
         { key: 'serialNumber', label: 'Serial Number' },
         { key: 'customerName', label: 'Customer Name' },
-        { key: 'totalQuantity', label: 'Total Quantity' },
-        { key: 'totalProducts', label: 'Total Products' },
+        { key: 'productName', label: 'Product Name' },
+        { key: 'quantity', label: 'Quantity' },
         { key: 'tax', label: 'Tax' },
         { key: 'totalAmount', label: 'Total Amount' },
         { key: 'date', label: 'Date' }
       ],
-      data: finalInvoices
+      data: processedInvoices || []
     },
     {
       label: 'Products',
@@ -106,7 +58,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'phoneNumber', label: 'Phone Number' },
         { key: 'totalPurchaseAmount', label: 'Total Purchase Amount' }
       ],
-      data: finalCustomers
+      data: data?.customers || []
     }
   ];
 

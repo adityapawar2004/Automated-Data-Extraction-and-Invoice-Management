@@ -35,7 +35,8 @@ function CustomTable({ columns, data }) {
         <TableHead>
           <TableRow>
             {columns.map((column) => (
-              <TableCell key={column.key}
+              <TableCell 
+                key={column.key}
                 sx={{ 
                   fontWeight: 'bold',
                   backgroundColor: '#f5f5f5'
@@ -48,11 +49,14 @@ function CustomTable({ columns, data }) {
         </TableHead>
         <TableBody>
           {data.map((row, index) => (
-            <TableRow key={row.id || index}
+            <TableRow 
+              key={row.id || index}
               sx={{ '&:nth-of-type(odd)': { backgroundColor: '#fafafa' } }}
             >
               {columns.map((column) => (
-                <TableCell key={`${row.id || index}-${column.key}`}>
+                <TableCell 
+                  key={`${row.id || index}-${column.key}`}
+                >
                   {formatValue(row[column.key], column.key)}
                 </TableCell>
               ))}
