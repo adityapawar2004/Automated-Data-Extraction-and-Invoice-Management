@@ -17,11 +17,11 @@ export const processFileWithGemini = async (file) => {
 const processSpreadsheetFile = async (file) => {
   try {
     const data = await readSpreadsheetData(file);
-    // Convert the data to the expected format
+    // Add fileName to the formatted data
     const formattedData = {
-      invoices: extractInvoices(data),
-      products: extractProducts(data),
-      customers: extractCustomers(data)
+      invoices: extractInvoices(data, file.name),
+      products: extractProducts(data, file.name),
+      customers: extractCustomers(data, file.name)
     };
     return JSON.stringify(formattedData);
   } catch (error) {
@@ -49,9 +49,10 @@ const readSpreadsheetData = (file) => {
   });
 };
 
-const extractInvoices = (data) => {
+const extractInvoices = (data, fileName) => {
   return data.map((row, index) => ({
     id: `invoice-${Date.now()}-${index}`,
+    fileName: fileName,
     serialNumber: row['Serial Number'] || row['Invoice Number'] || row['serialNumber'] || '',
     customerName: row['Customer Name'] || row['customerName'] || '',
     productName: row['Product Name'] || row['productName'] || '',
@@ -62,9 +63,10 @@ const extractInvoices = (data) => {
   }));
 };
 
-const extractProducts = (data) => {
+const extractProducts = (data, fileName) => {
   return data.map((row, index) => ({
     id: `product-${Date.now()}-${index}`,
+    fileName: fileName,
     name: row['Product Name'] || row['productName'] || '',
     quantity: Number(row['Quantity'] || row['quantity'] || 0),
     unitPrice: Number(row['Unit Price'] || row['unitPrice'] || 0),
@@ -74,26 +76,35 @@ const extractProducts = (data) => {
   }));
 };
 
-const extractCustomers = (data) => {
-  // Create a map to aggregate customer data
+const extractCustomers = (data, fileName) => {
   const customerMap = new Map();
 
   data.forEach(row => {
     const customerName = row['Customer Name'] || row['customerName'] || '';
     const phoneNumber = row['Phone Number'] || row['phoneNumber'] || '';
-    const amount = Number(row['Total Amount'] || row['totalAmount'] || 0);
+    const invoiceAmount = Number(row['Total Amount'] || row['totalAmount'] || 0);
 
-    if (customerName) {
-      if (!customerMap.has(customerName)) {
-        customerMap.set(customerName, {
-          id: `customer-${Date.now()}-${customerName}`,
-          customerName,
-          phoneNumber,
-          totalPurchaseAmount: amount
-        });
-      } else {
-        const customer = customerMap.get(customerName);
-        customer.totalPurchaseAmount += amount;
+    // Create a single entry for the Excel file
+    const key = fileName; // Use fileName as the key
+    
+    if (!customerMap.has(key)) {
+      customerMap.set(key, {
+        id: `customer-${Date.now()}-${fileName}`,
+        customerName: customerName || '-', // Default name if not found
+        phoneNumber: phoneNumber || '-',
+        totalPurchaseAmount: invoiceAmount,
+        fileName: fileName // Add fileName to track the source
+      });
+    } else {
+      const customer = customerMap.get(key);
+      customer.totalPurchaseAmount += invoiceAmount;
+      // Update customer name and phone if available
+      if (customerName && !customer.customerName.includes(customerName)) {
+        customer.customerName = customer.customerName === 'Excel Data' ? 
+          customerName : `${customer.customerName}, ${customerName}`;
+      }
+      if (phoneNumber && customer.phoneNumber === '-') {
+        customer.phoneNumber = phoneNumber;
       }
     }
   });

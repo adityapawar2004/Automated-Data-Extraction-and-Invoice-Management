@@ -15,6 +15,9 @@ function CustomTable({ columns, data }) {
   }
 
   const formatValue = (value, key) => {
+    if (key === 'fileName') {
+      return value.split('.').slice(0, -1).join('.').split('/').pop();
+    }
     if (typeof value === 'number') {
       if (key.toLowerCase().includes('price') || 
           key.toLowerCase().includes('amount') || 

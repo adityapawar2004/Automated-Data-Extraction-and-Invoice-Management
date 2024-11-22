@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Tabs, Tab, Box } from '@mui/material';
+import { Tabs, Tab, Box, CircularProgress } from '@mui/material';
 import CustomTable from './CustomTable';
 
-function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
+function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoading }) {
   const [value, setValue] = useState(0);
 
   const handleChange = (event, newValue) => {
@@ -58,12 +58,12 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
         id: `aggregated-${fileName}`,
         customerName: customer.customerName,
         phoneNumber: customer.phoneNumber,
-        totalPurchaseAmount: 0,
+        totalPurchaseAmount: customer.totalPurchaseAmount,
         fileName: fileName
       };
+    } else {
+      acc[fileName].totalPurchaseAmount += customer.totalPurchaseAmount;
     }
-
-    acc[fileName].totalPurchaseAmount += Number(customer.totalPurchaseAmount || 0);
     
     return acc;
   }, {});
@@ -74,6 +74,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
     {
       label: 'Invoices',
       columns: [
+        { key: 'fileName', label: 'File Name' },
         { key: 'serialNumber', label: 'Serial Number' },
         { key: 'customerName', label: 'Customer Name' },
         { key: 'totalQuantity', label: 'Total Quantity' },
@@ -87,6 +88,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
     {
       label: 'Products',
       columns: [
+        { key: 'fileName', label: 'File Name' },
         { key: 'name', label: 'Name' },
         { key: 'quantity', label: 'Quantity' },
         { key: 'unitPrice', label: 'Unit Price' },
@@ -99,6 +101,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
     {
       label: 'Customers',
       columns: [
+        { key: 'fileName', label: 'File Name' },
         { key: 'customerName', label: 'Customer Name' },
         { key: 'phoneNumber', label: 'Phone Number' },
         { key: 'totalPurchaseAmount', label: 'Total Purchase Amount' }
@@ -122,7 +125,13 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] } }) {
           style={{ padding: '20px' }}
         >
           {value === index && (
-            <CustomTable columns={tab.columns} data={tab.data} />
+            isLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <CustomTable columns={tab.columns} data={tab.data} />
+            )
           )}
         </div>
       ))}

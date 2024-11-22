@@ -1,12 +1,15 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { processFileWithGemini } from '../services/geminiService';
 import * as XLSX from 'xlsx';
 
 function FileUpload({ onFileProcessed }) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const onDrop = useCallback(async (acceptedFiles) => {
     try {
+      setIsLoading(true);
       const file = acceptedFiles[0];
       
       if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
@@ -21,6 +24,8 @@ function FileUpload({ onFileProcessed }) {
       }
     } catch (error) {
       console.error('Error processing file:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, [onFileProcessed]);
 
@@ -64,22 +69,32 @@ function FileUpload({ onFileProcessed }) {
         borderRadius: 2,
         p: 3,
         textAlign: 'center',
-        cursor: 'pointer',
+        cursor: isLoading ? 'default' : 'pointer',
         '&:hover': {
-          borderColor: 'primary.main'
-        }
+          borderColor: isLoading ? '#cccccc' : 'primary.main'
+        },
+        position: 'relative'
       }}
     >
-      <input {...getInputProps()} />
-      <Typography>
-        {isDragActive
-          ? "Drop the file here..."
-          : "Drag 'n' drop a PDF, image, or Excel file, or click to select"
-        }
-      </Typography>
-      <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-        Supported formats: PDF, JPG, JPEG, PNG, XLSX, XLS, CSV
-      </Typography>
+      <input {...getInputProps()} disabled={isLoading} />
+      {isLoading ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <CircularProgress />
+          <Typography>Uploading file...</Typography>
+        </Box>
+      ) : (
+        <>
+          <Typography>
+            {isDragActive
+              ? "Drop the file here..."
+              : "Drag 'n' drop a PDF, image, or Excel file, or click to select"
+            }
+          </Typography>
+          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+            Supported formats: PDF, JPG, JPEG, PNG, XLSX, XLS, CSV
+          </Typography>
+        </>
+      )}
     </Box>
   );
 }
