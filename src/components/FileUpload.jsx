@@ -2,25 +2,56 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Box, Typography } from '@mui/material';
 import { processFileWithGemini } from '../services/geminiService';
+import * as XLSX from 'xlsx';
 
 function FileUpload({ onFileProcessed }) {
   const onDrop = useCallback(async (acceptedFiles) => {
     try {
       const file = acceptedFiles[0];
-      const result = await processFileWithGemini(file);
-      const parsedData = parseGeminiResponse(result, file.name);
-      onFileProcessed(parsedData);
+      
+      if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
+        const csvData = await convertExcelToCSV(file);
+        const result = await processFileWithGemini(new Blob([csvData], { type: 'text/csv' }));
+        const parsedData = parseGeminiResponse(result, file.name);
+        onFileProcessed(parsedData);
+      } else {
+        const result = await processFileWithGemini(file);
+        const parsedData = parseGeminiResponse(result, file.name);
+        onFileProcessed(parsedData);
+      }
     } catch (error) {
       console.error('Error processing file:', error);
     }
   }, [onFileProcessed]);
+
+  const convertExcelToCSV = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const csvData = XLSX.utils.sheet_to_csv(firstSheet);
+          resolve(csvData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
       'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png']
+      'image/png': ['.png'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv']
     },
     multiple: false
   });
@@ -43,11 +74,11 @@ function FileUpload({ onFileProcessed }) {
       <Typography>
         {isDragActive
           ? "Drop the file here..."
-          : "Drag 'n' drop a PDF or image file, or click to select"
+          : "Drag 'n' drop a PDF, image, or Excel file, or click to select"
         }
       </Typography>
       <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-        Supported formats: PDF, JPG, JPEG, PNG
+        Supported formats: PDF, JPG, JPEG, PNG, XLSX, XLS, CSV
       </Typography>
     </Box>
   );
