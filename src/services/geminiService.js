@@ -119,16 +119,16 @@ const processImageOrPDF = async (file) => {
 
   const prompt = `Analyze this ${file.type.includes('pdf') ? 'PDF document' : 'image'} and extract the following information into three distinct sections:
 
-1. Invoices section with exactly these fields:
-   - Serial Number
+1. Invoices section: Create a separate invoice entry for EACH product found in the image, with exactly these fields:
+   - Serial Number (use the same invoice number for all products from the same invoice)
    - Customer Name
    - Product Name
    - Quantity
    - Tax
-   - Total Amount
+   - Total Amount (individual product total)
    - Date
 
-2. Products section with exactly these fields:
+2. Products section: Create a separate entry for EACH unique product found, with exactly these fields:
    - Name
    - Quantity
    - Unit Price
@@ -139,11 +139,12 @@ const processImageOrPDF = async (file) => {
 3. Customers section with exactly these fields:
    - Customer Name
    - Phone Number
-   - Total Purchase Amount
+   - Total Purchase Amount (sum of all products)
 
 Return ONLY a JSON object with these three sections: "invoices", "products", and "customers".
 Format numbers as plain numbers without currency symbols.
-Do not include any explanatory text or markdown formatting.`;
+Do not include any explanatory text or markdown formatting.
+If multiple products are found in a single invoice, create separate entries for each product while maintaining the same invoice number.`;
 
   const result = await model.generateContent([
     prompt,
