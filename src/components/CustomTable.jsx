@@ -6,15 +6,37 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Button
 } from '@mui/material';
 
-function CustomTable({ columns, data }) {
+function CustomTable({ columns, data, onEdit }) {
   if (!data || data.length === 0) {
     return <div>No data available</div>;
   }
 
-  const formatValue = (value, key) => {
+  const formatValue = (value, key, row) => {
+    if (key === 'actions') {
+      return (
+        <Button
+          variant="contained"
+          size="small"
+          sx={{
+            backgroundColor: '#d32f2f',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: '#b71c1c',
+            },
+            minWidth: '50px',
+            padding: '4px 12px',
+            fontSize: '0.75rem',
+          }}
+          onClick={() => onEdit(row)}
+        >
+          Edit
+        </Button>
+      );
+    }
     if (key === 'fileName') {
       return value.split('.').slice(0, -1).join('.').split('/').pop();
     }
@@ -39,7 +61,10 @@ function CustomTable({ columns, data }) {
                 key={column.key}
                 sx={{ 
                   fontWeight: 'bold',
-                  backgroundColor: '#f5f5f5'
+                  backgroundColor: '#f5f5f5',
+                  ...(column.key === 'actions' && {
+                    width: '80px'
+                  })
                 }}
               >
                 {column.label}
@@ -57,7 +82,7 @@ function CustomTable({ columns, data }) {
                 <TableCell 
                   key={`${row.id || index}-${column.key}`}
                 >
-                  {formatValue(row[column.key], column.key)}
+                  {formatValue(row[column.key], column.key, row)}
                 </TableCell>
               ))}
             </TableRow>

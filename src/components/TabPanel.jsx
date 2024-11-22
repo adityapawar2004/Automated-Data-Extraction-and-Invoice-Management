@@ -9,23 +9,16 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
     setValue(newValue);
   };
 
-  // Modify the invoice processing to keep individual product rows
-  const processedInvoices = data?.invoices?.map(invoice => ({
-    id: `${invoice.id}-${invoice.productName}`,
-    fileName: invoice.fileName,
-    serialNumber: invoice.serialNumber,
-    customerName: invoice.customerName,
-    productName: invoice.productName,
-    quantity: Number(invoice.quantity || 0),
-    tax: Number(invoice.tax || 0),
-    totalAmount: Number(invoice.totalAmount || 0),
-    date: invoice.date
-  }));
+  const handleEdit = (row) => {
+    console.log('Editing row:', row);
+    // Add your edit logic here
+  };
 
   const tabs = [
     {
       label: 'Invoices',
       columns: [
+        { key: 'actions', label: 'Actions' },
         { key: 'fileName', label: 'File Name' },
         { key: 'serialNumber', label: 'Serial Number' },
         { key: 'customerName', label: 'Customer Name' },
@@ -35,11 +28,12 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
         { key: 'totalAmount', label: 'Total Amount' },
         { key: 'date', label: 'Date' }
       ],
-      data: processedInvoices || []
+      data: data?.invoices || []
     },
     {
       label: 'Products',
       columns: [
+        { key: 'actions', label: 'Actions' },
         { key: 'fileName', label: 'File Name' },
         { key: 'name', label: 'Name' },
         { key: 'quantity', label: 'Quantity' },
@@ -53,6 +47,7 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
     {
       label: 'Customers',
       columns: [
+        { key: 'actions', label: 'Actions' },
         { key: 'fileName', label: 'File Name' },
         { key: 'customerName', label: 'Customer Name' },
         { key: 'phoneNumber', label: 'Phone Number' },
@@ -82,7 +77,11 @@ function TabPanel({ data = { invoices: [], products: [], customers: [] }, isLoad
                 <CircularProgress />
               </Box>
             ) : (
-              <CustomTable columns={tab.columns} data={tab.data} />
+              <CustomTable 
+                columns={tab.columns} 
+                data={tab.data} 
+                onEdit={handleEdit}
+              />
             )
           )}
         </div>
