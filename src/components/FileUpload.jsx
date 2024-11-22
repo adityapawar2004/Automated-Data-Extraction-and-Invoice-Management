@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { processFileWithGemini } from '../services/geminiService';
 import * as XLSX from 'xlsx';
@@ -10,24 +10,44 @@ import { setLoading, addData } from '../redux/tableSlice';
 function FileUpload() {
   const dispatch = useDispatch();
   const isLoading = useSelector(state => state.table.isLoading);
+  const [error, setError] = useState(null);
 
   const onDrop = useCallback(async (acceptedFiles) => {
+    setError(null);
     try {
-      dispatch(setLoading(true));
+      if (acceptedFiles.length === 0) {
+        throw new Error('No file selected');
+      }
+
       const file = acceptedFiles[0];
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size too large. Maximum size is 10MB');
+      }
+
+      dispatch(setLoading(true));
       
-      if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
-        const csvData = await convertExcelToCSV(file);
-        const result = await processFileWithGemini(new Blob([csvData], { type: 'text/csv' }));
+      try {
+        let result;
+        if (file.type.includes('excel') || file.type.includes('spreadsheet')) {
+          const csvData = await convertExcelToCSV(file);
+          result = await processFileWithGemini(new Blob([csvData], { type: 'text/csv' }));
+        } else {
+          result = await processFileWithGemini(file);
+        }
+
         const parsedData = parseGeminiResponse(result, file.name);
         dispatch(addData(parsedData));
-      } else {
-        const result = await processFileWithGemini(file);
-        const parsedData = parseGeminiResponse(result, file.name);
-        dispatch(addData(parsedData));
+      } catch (error) {
+        if (error.message.includes('No data found in the image or PDF')) {
+          throw new Error('No data found in the file. Please ensure the file contains valid invoice information and try again.');
+        }
+        throw error;
+      } finally {
+        dispatch(setLoading(false));
       }
     } catch (error) {
       console.error('Error processing file:', error);
+      setError(error.message);
     } finally {
       dispatch(setLoading(false));
     }
@@ -88,7 +108,7 @@ function FileUpload() {
     >
       <input {...getInputProps()} disabled={isLoading} />
       {isLoading ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,justifyContent:'center' }}>
           <CircularProgress />
           <Typography>Uploading file...</Typography>
         </Box>
@@ -122,6 +142,11 @@ function FileUpload() {
           </Typography>
         </>
       )}
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error.message}<Typography>No data Found in the file.</Typography>
+        </Alert>
+      )}
     </Box>
   );
 }
@@ -130,11 +155,17 @@ function parseGeminiResponse(response, fileName) {
   try {
     const jsonString = response.replace(/```json\n|\n```/g, '').trim();
     let parsedData = JSON.parse(jsonString);
-    const timestamp = Date.now();
+
+    // Check if the response contains empty arrays
+    if (parsedData.invoices.length === 0 && 
+        parsedData.products.length === 0 && 
+        parsedData.customers.length === 0) {
+      throw new Error('No data could be extracted from the file. Please check if the file contains valid invoice data.');
+    }
 
     return {
       customers: parsedData.customers.map(customer => ({
-        id: `customer-${timestamp}-${Math.random()}`,
+        id: `customer-${Date.now()}-${Math.random()}`,
         fileName: fileName,
         customerName: customer.customerName || customer['Customer Name'] || '',
         phoneNumber: customer.phoneNumber || customer['Phone Number'] || '',
@@ -142,7 +173,7 @@ function parseGeminiResponse(response, fileName) {
       })),
       
       invoices: parsedData.invoices.map(invoice => ({
-        id: `invoice-${timestamp}-${Math.random()}`,
+        id: `invoice-${Date.now()}-${Math.random()}`,
         fileName: fileName,
         serialNumber: invoice.serialNumber || invoice['Serial Number'] || '',
         customerName: invoice.customerName || invoice['Customer Name'] || '',
@@ -155,7 +186,7 @@ function parseGeminiResponse(response, fileName) {
       })),
       
       products: parsedData.products.map(product => ({
-        id: `product-${timestamp}-${Math.random()}`,
+        id: `product-${Date.now()}-${Math.random()}`,
         fileName: fileName,
         name: product.name || product.Name || '',
         quantity: product.quantity || product.Quantity || 0,

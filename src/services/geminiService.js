@@ -9,8 +9,7 @@ export const processFileWithGemini = async (file) => {
       return await processImageOrPDF(file);
     }
   } catch (error) {
-    console.error("Error processing file:", error);
-    throw error;
+    throw new Error(error.message || "No data could be extracted from this file");
   }
 };
 
@@ -113,11 +112,12 @@ const extractCustomers = (data, fileName) => {
 };
 
 const processImageOrPDF = async (file) => {
-  const base64Data = await fileToBase64(file);
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  try {
+    const base64Data = await fileToBase64(file);
+    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const prompt = `Analyze this ${file.type.includes('pdf') ? 'PDF document' : 'image'} and extract the following information into three distinct sections:
+    const prompt = `Analyze this ${file.type.includes('pdf') ? 'PDF document' : 'image'} and extract the following information into three distinct sections:
 
 1. Invoices section: Create a separate invoice entry for EACH product found in the image, with exactly these fields:
    - Serial Number (use the same invoice number for all products from the same invoice)
@@ -146,18 +146,30 @@ Format numbers as plain numbers without currency symbols.
 Do not include any explanatory text or markdown formatting.
 If multiple products are found in a single invoice, create separate entries for each product while maintaining the same invoice number.`;
 
-  const result = await model.generateContent([
-    prompt,
-    {
-      inlineData: {
-        data: base64Data,
-        mimeType: file.type
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: file.type
+        }
       }
-    }
-  ]);
+    ]);
 
-  const response = await result.response;
-  return response.text();
+    const response = await result.response;
+    const text = response.text();
+
+    // Check for empty response
+    if (text.includes('"invoices": []') && 
+        text.includes('"products": []') && 
+        text.includes('"customers": []')) {
+      throw new Error('No data found in the image or PDF. Please ensure the file contains valid invoice information.');
+    }
+
+    return text;
+  } catch (error) {
+    throw new Error('No data could be extracted from this file');
+  }
 };
 
 const fileToBase64 = (file) => {
