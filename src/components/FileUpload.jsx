@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Box, Typography, CircularProgress } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { processFileWithGemini } from '../services/geminiService';
 import * as XLSX from 'xlsx';
 import { useDispatch, useSelector } from 'react-redux';
@@ -70,30 +71,53 @@ function FileUpload() {
       sx={{
         border: '2px dashed #cccccc',
         borderRadius: 2,
-        p: 3,
+        p: 2,
         textAlign: 'center',
         cursor: isLoading ? 'default' : 'pointer',
         '&:hover': {
-          borderColor: isLoading ? '#cccccc' : 'primary.main'
+          borderColor: isLoading ? '#cccccc' : 'primary.main',
+          backgroundColor: 'rgba(0, 0, 0, 0.04)'
         },
-        position: 'relative'
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 1,
+        minHeight: '180px'
       }}
     >
       <input {...getInputProps()} disabled={isLoading} />
       {isLoading ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
           <CircularProgress />
           <Typography>Uploading file...</Typography>
         </Box>
       ) : (
         <>
-          <Typography>
+          <UploadFileIcon 
+            sx={{ 
+              fontSize: 40,
+              color: 'grey',
+              mb: 0.5
+            }} 
+          />
+          <Typography variant="h6" color="grey">
             {isDragActive
               ? "Drop the file here..."
-              : "Drag 'n' drop a PDF, image, or Excel file, or click to select"
+              : "Drag 'n' drop a file here"
             }
           </Typography>
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+          <Typography 
+            variant="body1" 
+            color="textSecondary"
+          >
+            or click to select
+          </Typography>
+          <Typography 
+            variant="caption" 
+            color="textSecondary" 
+            sx={{ mt: 1 }}
+          >
             Supported formats: PDF, JPG, JPEG, PNG, XLSX, XLS, CSV
           </Typography>
         </>

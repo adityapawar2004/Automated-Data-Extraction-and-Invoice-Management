@@ -23,8 +23,8 @@ const tableSlice = createSlice({
     updateTableData: (state, action) => {
       const { tableKey, editedRow } = action.payload;
 
+      // Handle updates from Invoices tab
       if (tableKey === 'invoices') {
-        // Find the old invoice before updating
         const oldInvoice = state.invoices.find(inv => inv.id === editedRow.id);
 
         // Update the invoice itself
@@ -35,9 +35,10 @@ const tableSlice = createSlice({
         if (oldInvoice) {
           // If product name changed, update all related records
           if (oldInvoice.productName !== editedRow.productName) {
-            // Update all invoices with the same old product name
+            // Update all invoices with the same old product name from same file
             state.invoices = state.invoices.map(invoice => {
-              if (invoice.productName === oldInvoice.productName) {
+              if (invoice.productName === oldInvoice.productName && 
+                  invoice.fileName === oldInvoice.fileName) {
                 return {
                   ...invoice,
                   productName: editedRow.productName
@@ -46,14 +47,18 @@ const tableSlice = createSlice({
               return invoice;
             });
 
-            // Update product records
+            // Update product records from same file
             state.products = state.products.map(product => {
-              if (product.name === oldInvoice.productName) {
+              if (product.name === oldInvoice.productName && 
+                  product.fileName === oldInvoice.fileName) {
                 return {
                   ...product,
                   name: editedRow.productName,
                   quantity: state.invoices
-                    .filter(inv => inv.productName === editedRow.productName)
+                    .filter(inv => 
+                      inv.productName === editedRow.productName && 
+                      inv.fileName === oldInvoice.fileName
+                    )
                     .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0)
                 };
               }
@@ -102,6 +107,62 @@ const tableSlice = createSlice({
                 };
               }
               return customer;
+            });
+          }
+        }
+      }
+
+      // Handle updates from Products tab
+      if (tableKey === 'products') {
+        const oldProduct = state.products.find(prod => prod.id === editedRow.id);
+
+        // Update the product itself
+        state.products = state.products.map(product =>
+          product.id === editedRow.id ? editedRow : product
+        );
+
+        if (oldProduct && oldProduct.name !== editedRow.name) {
+          // Update all products with the same name from same file
+          state.products = state.products.map(product => {
+            if (product.name === oldProduct.name && 
+                product.fileName === oldProduct.fileName) {
+              return {
+                ...product,
+                name: editedRow.name
+              };
+            }
+            return product;
+          });
+
+          // Update all related invoices from same file
+          state.invoices = state.invoices.map(invoice => {
+            if (invoice.productName === oldProduct.name && 
+                invoice.fileName === oldProduct.fileName) {
+              return {
+                ...invoice,
+                productName: editedRow.name
+              };
+            }
+            return invoice;
+          });
+
+          // Recalculate quantities for the updated product
+          const updatedProduct = state.products.find(p => p.id === editedRow.id);
+          if (updatedProduct) {
+            state.products = state.products.map(product => {
+              if (product.name === editedRow.name && 
+                  product.fileName === oldProduct.fileName) {
+                return {
+                  ...product,
+                  quantity: state.invoices
+                    .filter(inv => 
+                      inv.productName === editedRow.name && 
+                      inv.fileName === oldProduct.fileName
+                    )
+                    .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0)
+                };
+              }
+              return product;
             });
           }
         }

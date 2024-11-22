@@ -24,7 +24,7 @@ function App() {
               fontWeight="bold" 
               sx={{ mb: 3, textAlign: 'center' }}
             >
-              Data Extraction & Invoice Management
+             Automated Data Extraction and Invoice Management
             </Typography>
             <FileUpload />
             {(customers.length > 0 || products.length > 0 || invoices.length > 0) && (
